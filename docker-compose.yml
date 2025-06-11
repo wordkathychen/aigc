@@ -1,0 +1,127 @@
+version: '3.8'
+
+services:
+  web:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: ai_text_generator_web
+    restart: always
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      - ./templates:/app/templates
+      - ./uploads:/app/uploads
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_APP=src/web/app.py
+      - FLASK_ENV=production
+      - SECRET_KEY=${SECRET_KEY:-changeme_in_production}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-changeme_in_production}
+      - DATABASE_URI=sqlite:///data/app.db
+      - LOG_LEVEL=INFO
+      - TZ=Asia/Shanghai
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
+      - REQUIRE_NETWORK=true
+      - CHECK_API_ENDPOINTS=true
+      - API_CHECK_TIMEOUT=10
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/check_environment"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - ai_text_network
+
+  nginx:
+    image: nginx:1.23-alpine
+    container_name: ai_text_generator_nginx
+    restart: always
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./logs/nginx:/var/log/nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - web
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:80"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
+    networks:
+      - ai_text_network
+
+  # 备份服务
+  backup:
+    image: alpine:latest
+    container_name: ai_text_generator_backup
+    volumes:
+      - ./data:/data
+      - ./backups:/backups
+    command: >
+      /bin/sh -c "
+        apk add --no-cache tar gzip;
+        while true;
+        do
+          echo 'Creating backup...';
+          TIMESTAMP=$$(date +%Y%m%d%H%M%S);
+          tar -czf /backups/backup_$$TIMESTAMP.tar.gz -C /data .;
+          find /backups -name 'backup_*.tar.gz' -type f -mtime +7 -delete;
+          echo 'Backup complete. Sleeping for 24 hours...';
+          sleep 86400;
+        done
+      "
+    networks:
+      - ai_text_network
+    restart: unless-stopped
+
+  # 监控服务（可选）
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: ai_text_generator_prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "9090:9090"
+    networks:
+      - ai_text_network
+    restart: unless-stopped
+    profiles: ["monitoring"]
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: ai_text_generator_grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    ports:
+      - "3000:3000"
+    networks:
+      - ai_text_network
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    profiles: ["monitoring"]
+
+networks:
+  ai_text_network:
+    driver: bridge
+
+volumes:
+  prometheus_data:
+  grafana_data: 

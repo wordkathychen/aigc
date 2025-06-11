@@ -1,0 +1,4 @@
+2025-06-12 02:48:54,729 - __main__ - INFO - 应用目录: D:\迅雷下载\新建文件夹\ai-text-generator
+2025-06-12 02:48:56,211 - src.models.client_init - ERROR - Web后台连接错误: HTTPConnectionPool(host='your-server-address', port=5000): Max retries exceeded with url: /api/check_environment (Caused by NameResolutionError("<urllib3.connection.HTTPConnection object at 0x00000145BE5E0DD0>: Failed to resolve 'your-server-address' ([Errno 11001] getaddrinfo failed)"))
+2025-06-12 02:48:56,213 - __main__ - WARNING - Web后台连接失败，将使用本地模式
+2025-06-12 02:48:56,227 - __main__ - ERROR - 启动GUI失败: invalid syntax (main_window.py, line 204)
