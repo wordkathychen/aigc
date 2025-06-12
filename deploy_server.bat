@@ -38,21 +38,30 @@ if not exist "data\uploads\outputs" mkdir data\uploads\outputs
 if not exist "data\uploads\templates" mkdir data\uploads\templates
 if not exist "logs" mkdir logs
 
-echo [步骤2] 构建Docker镜像...
+echo [步骤2] 创建自定义Docker Compose覆盖文件...
+echo version: '3.8' > docker-compose.override.yml
+echo. >> docker-compose.override.yml
+echo services: >> docker-compose.override.yml
+echo   web: >> docker-compose.override.yml
+echo     ports: >> docker-compose.override.yml
+echo       - "154.201.65.63:5000:5000" >> docker-compose.override.yml
+echo       - "154.201.65.63:8000:8000" >> docker-compose.override.yml
+
+echo [步骤3] 构建Docker镜像...
 docker-compose build
 if %errorlevel% neq 0 (
     echo [错误] Docker镜像构建失败
     goto :error
 )
 
-echo [步骤3] 启动Docker容器...
+echo [步骤4] 启动Docker容器...
 docker-compose up -d
 if %errorlevel% neq 0 (
     echo [错误] Docker容器启动失败
     goto :error
 )
 
-echo [步骤4] 检查容器状态...
+echo [步骤5] 检查容器状态...
 timeout /t 5 /nobreak > nul
 docker-compose ps | findstr "ai-text-generator-web" | findstr "Up"
 if %errorlevel% neq 0 (
@@ -62,30 +71,16 @@ if %errorlevel% neq 0 (
     echo [成功] 容器已成功启动
 )
 
-REM 获取服务器IP地址
-for /f "tokens=1-2 delims=:" %%a in ('ipconfig ^| findstr "IPv4"') do (
-    set IP=%%b
-)
-set IP=%IP:~1%
-
-REM 获取端口
-set WEB_PORT=5000
-if exist ".env" (
-    for /f "tokens=1,* delims==" %%a in ('type .env ^| findstr "WEB_PORT"') do (
-        set WEB_PORT=%%b
-    )
-)
-
 echo.
 echo ===================================================
 echo 部署完成!
 echo.
 echo Web后台已部署，可通过以下方式访问:
-echo   - 管理界面: http://%IP%:%WEB_PORT%
-echo   - API接口: http://%IP%:%WEB_PORT%/api
+echo   - Web界面: http://154.201.65.63:5000
+echo   - API接口: http://154.201.65.63:8000/api
 echo.
 echo 客户端配置:
-echo   - 在客户端设置中将服务器地址设为: http://%IP%:%WEB_PORT%/api
+echo   - 在客户端设置中将服务器地址设为: http://154.201.65.63:8000/api
 echo.
 echo 管理命令:
 echo   - 查看日志: docker-compose logs

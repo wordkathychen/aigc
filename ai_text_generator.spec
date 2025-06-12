@@ -1,74 +1,54 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+# 导入必要的模块
 import os
-import sys
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
-block_cipher = None
+# 收集额外的数据文件和子模块
+extra_datas = []
+extra_imports = []
 
-# 收集所有数据文件
-datas = [
-    ('templates', 'templates'),
-    ('README.md', '.'),
-]
-
-# 确保logs和data目录存在于打包后的应用中
-for dir_name in ['logs', 'data']:
-    if not os.path.exists(dir_name):
-        os.makedirs(dir_name)
-    datas.append((dir_name, dir_name))
-
-# 收集所有子模块，确保所有必要的模块都被包含
-hidden_imports = collect_submodules('src')
+# 收集可能有问题的模块
+for module in ['tkinter', 'PIL', 'cryptography']:
+    try:
+        extra_datas.extend(collect_data_files(module))
+        extra_imports.extend(collect_submodules(module))
+    except Exception:
+        pass
 
 a = Analysis(
-    ['src/main.py'],
-    pathex=[os.path.abspath('.')],
+    ['main.py'],
+    pathex=[],
     binaries=[],
-    datas=datas,
-    hiddenimports=hidden_imports,
+    datas=[('src/web/templates', 'src/web/templates'), ('src/web/static', 'src/web/static'), ('src/config', 'src/config')] + extra_datas,
+    hiddenimports=['src.web.routes.main', 'src.web.routes.auth', 'src.web.routes.paper_module'] + extra_imports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
     excludes=[],
-    win_no_prefer_redirects=False,
-    win_private_assemblies=False,
-    cipher=block_cipher,
     noarchive=False,
+    optimize=0,
 )
-
-pyz = PYZ(
-    a.pure, 
-    a.zipped_data,
-    cipher=block_cipher
-)
+pyz = PYZ(a.pure)
 
 exe = EXE(
     pyz,
     a.scripts,
+    a.binaries,
+    a.datas,
     [],
-    exclude_binaries=True,
-    name='AI论文生成助手',
+    name='ai_text_generator',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
+    upx_exclude=[],
+    runtime_tmpdir=None,
     console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='icon.ico' if os.path.exists('icon.ico') else None,
+    icon=['resources\\icon.ico'],
 )
-
-coll = COLLECT(
-    exe,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    name='AI论文生成助手',
-) 
