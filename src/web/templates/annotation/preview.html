@@ -1,0 +1,221 @@
+{% extends "admin/base.html" %}
+
+{% block title %}批注预览{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<style>
+    .annotation-card {
+        margin-bottom: 2rem;
+        border-left: 4px solid #4285f4;
+    }
+    .original-text {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-radius: 4px;
+        font-family: 'Courier New', monospace;
+        white-space: pre-wrap;
+    }
+    .modified-text {
+        background-color: #f0fff0;
+        padding: 1rem;
+        border-radius: 4px;
+        font-family: 'Courier New', monospace;
+        white-space: pre-wrap;
+        color: #28a745;
+    }
+    .annotation-content {
+        background-color: #fff3cd;
+        padding: 0.5rem;
+        border-radius: 4px;
+        margin-bottom: 1rem;
+    }
+    .edit-btn {
+        margin-top: 0.5rem;
+    }
+    #customTextModal textarea {
+        min-height: 200px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title">批注预览 - {{ filename }}</h3>
+                    <div>
+                        <a href="{{ url_for('annotation.index') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left mr-1"></i>返回
+                        </a>
+                        <a href="{{ url_for('annotation.download', file_id=file_id) }}" class="btn btn-success ml-2">
+                            <i class="fas fa-download mr-1"></i>下载修改后文档
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if annotations %}
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle mr-2"></i>
+                                共发现 <strong>{{ annotations|length }}</strong> 条批注。系统已自动处理，您可以查看修改结果或手动编辑。
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="annotations-container">
+                        {% for annotation in annotations %}
+                        <div class="card annotation-card" id="annotation-{{ loop.index0 }}">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">批注 #{{ loop.index }} (第 {{ annotation.page_num + 1 }} 页)</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <h6>批注内容:</h6>
+                                        <div class="annotation-content">{{ annotation.content }}</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6>原始文本:</h6>
+                                        <div class="original-text">{{ annotation.text_context }}</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6>修改后文本:</h6>
+                                        <div class="modified-text" id="modified-text-{{ loop.index0 }}">
+                                            {% if annotation.processed and annotation.replaced_text %}
+                                                {{ annotation.replaced_text }}
+                                            {% else %}
+                                                <span class="text-muted">(未能生成修改文本)</span>
+                                            {% endif %}
+                                        </div>
+                                        <button type="button" class="btn btn-outline-primary btn-sm edit-btn" 
+                                                data-annotation-idx="{{ loop.index0 }}" 
+                                                data-file-id="{{ file_id }}">
+                                            <i class="fas fa-edit mr-1"></i>编辑修改文本
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        未找到任何批注，请确保上传的PDF包含批注内容。
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 自定义文本编辑模态框 -->
+<div class="modal fade" id="customTextModal" tabindex="-1" role="dialog" aria-labelledby="customTextModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="customTextModalLabel">编辑修改文本</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="customTextArea">修改后文本:</label>
+                    <textarea class="form-control" id="customTextArea" rows="10"></textarea>
+                    <input type="hidden" id="currentAnnotationIdx" value="">
+                    <input type="hidden" id="currentFileId" value="">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="saveCustomText">保存修改</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // 获取所有编辑按钮
+        const editButtons = document.querySelectorAll('.edit-btn');
+        
+        // 为每个编辑按钮添加点击事件
+        editButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const annotationIdx = this.getAttribute('data-annotation-idx');
+                const fileId = this.getAttribute('data-file-id');
+                
+                // 设置隐藏字段的值
+                document.getElementById('currentAnnotationIdx').value = annotationIdx;
+                document.getElementById('currentFileId').value = fileId;
+                
+                // 获取当前修改文本
+                const currentText = document.getElementById(`modified-text-${annotationIdx}`).innerText.trim();
+                
+                // 如果是"(未能生成修改文本)"，则清空文本框
+                if (currentText === "(未能生成修改文本)") {
+                    document.getElementById('customTextArea').value = '';
+                } else {
+                    document.getElementById('customTextArea').value = currentText;
+                }
+                
+                // 显示模态框
+                const modalElement = document.getElementById('customTextModal');
+                const modalInstance = new bootstrap.Modal(modalElement);
+                modalInstance.show();
+            });
+        });
+        
+        // 保存按钮点击事件
+        document.getElementById('saveCustomText').addEventListener('click', function() {
+            const annotationIdx = document.getElementById('currentAnnotationIdx').value;
+            const fileId = document.getElementById('currentFileId').value;
+            const customText = document.getElementById('customTextArea').value;
+            
+            // 发送请求更新文本
+            fetch(`/annotation/regenerate/${fileId}/${annotationIdx}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    custom_text: customText
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // 更新页面上的文本
+                    document.getElementById(`modified-text-${annotationIdx}`).innerText = customText;
+                    
+                    // 关闭模态框
+                    const modalElement = document.getElementById('customTextModal');
+                    const modalInstance = bootstrap.Modal.getInstance(modalElement);
+                    modalInstance.hide();
+                    
+                    // 显示成功消息
+                    alert('修改文本已更新');
+                } else {
+                    alert(data.message || '更新失败');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('更新失败，请重试');
+            });
+        });
+    });
+</script>
+{% endblock %} 

@@ -1,0 +1,288 @@
+{% extends "admin/base.html" %}
+
+{% block title %}敏感词库 - AI文本生成器{% endblock %}
+
+{% block page_title %}敏感词库{% endblock %}
+
+{% block content %}
+<div class="row mt-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5>功能状态</h5>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <div class="custom-control custom-switch">
+                        <input type="checkbox" class="custom-control-input" id="enableSensitiveWords" {% if is_enabled %}checked{% endif %}>
+                        <label class="custom-control-label" for="enableSensitiveWords">内容敏感词检测</label>
+                    </div>
+                    <small class="form-text text-muted">过滤敏感词，默认开启</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5>敏感词列表</h5>
+                <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#addWordModal">
+                    <i class="fas fa-plus"></i> 新增敏感词
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <input type="text" class="form-control" placeholder="请输入关键词" id="searchKeyword">
+                            <div class="input-group-append">
+                                <button class="btn btn-primary" type="button" id="searchBtn">
+                                    <i class="fas fa-search"></i> 查询
+                                </button>
+                                <button class="btn btn-secondary" type="button" id="resetBtn">
+                                    <i class="fas fa-redo"></i> 重置
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-control" id="statusFilter">
+                            <option value="">请选择</option>
+                            <option value="1">已开启</option>
+                            <option value="0">已禁用</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 text-right">
+                        <button class="btn btn-outline-primary" id="exportBtn">
+                            <i class="fas fa-file-export"></i> 导出
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>敏感词</th>
+                                <th>状态</th>
+                                <th>创建时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for word in sensitive_words %}
+                            <tr>
+                                <td>{{ word.id }}</td>
+                                <td>{{ word.word }}</td>
+                                <td>
+                                    <div class="custom-control custom-switch">
+                                        <input type="checkbox" class="custom-control-input toggle-sensitive-word" id="word{{ word.id }}" data-id="{{ word.id }}" {% if word.is_active %}checked{% endif %}>
+                                        <label class="custom-control-label" for="word{{ word.id }}"></label>
+                                    </div>
+                                </td>
+                                <td>{{ word.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-danger delete-word" data-id="{{ word.id }}">
+                                        <i class="fas fa-trash"></i> 删除
+                                    </button>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center">暂无敏感词</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- 分页 -->
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <div>共 {{ total }} 条</div>
+                    <nav aria-label="Page navigation">
+                        <ul class="pagination justify-content-end">
+                            <li class="page-item {% if page == 1 %}disabled{% endif %}">
+                                <a class="page-link" href="{{ url_for('admin.sensitive_words', page=page-1) if page > 1 else '#' }}">上一页</a>
+                            </li>
+                            
+                            {% for p in range(1, total_pages + 1) %}
+                            <li class="page-item {% if p == page %}active{% endif %}">
+                                <a class="page-link" href="{{ url_for('admin.sensitive_words', page=p) }}">{{ p }}</a>
+                            </li>
+                            {% endfor %}
+                            
+                            <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+                                <a class="page-link" href="{{ url_for('admin.sensitive_words', page=page+1) if page < total_pages else '#' }}">下一页</a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加敏感词模态框 -->
+<div class="modal fade" id="addWordModal" tabindex="-1" role="dialog" aria-labelledby="addWordModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addWordModalLabel">新增敏感词</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="addSensitiveWordForm">
+                    <div class="form-group">
+                        <label for="newSensitiveWord">敏感词</label>
+                        <input type="text" class="form-control" id="newSensitiveWord" required>
+                        <small class="form-text text-muted">添加后将自动过滤包含此敏感词的内容</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="saveNewWord">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // 启用/禁用敏感词检测
+    $('#enableSensitiveWords').on('change', function() {
+        const status = $(this).is(':checked');
+        
+        $.ajax({
+            url: '{{ url_for("admin.toggle_sensitive_detection") }}',
+            type: 'POST',
+            data: { status: status ? 1 : 0 },
+            success: function(response) {
+                if (response.success) {
+                    showToast('设置已更新', 'success');
+                } else {
+                    showToast('更新失败: ' + response.message, 'error');
+                    // 恢复开关状态
+                    $('#enableSensitiveWords').prop('checked', !status);
+                }
+            },
+            error: function() {
+                showToast('服务器错误，请稍后重试', 'error');
+                // 恢复开关状态
+                $('#enableSensitiveWords').prop('checked', !status);
+            }
+        });
+    });
+    
+    // 切换敏感词状态
+    $('.toggle-sensitive-word').on('change', function() {
+        const id = $(this).data('id');
+        const status = $(this).is(':checked');
+        
+        $.ajax({
+            url: '{{ url_for("admin.toggle_sensitive_word") }}',
+            type: 'POST',
+            data: { id: id, status: status ? 1 : 0 },
+            success: function(response) {
+                if (response.success) {
+                    showToast('状态已更新', 'success');
+                } else {
+                    showToast('更新失败: ' + response.message, 'error');
+                    // 恢复开关状态
+                    $(`#word${id}`).prop('checked', !status);
+                }
+            },
+            error: function() {
+                showToast('服务器错误，请稍后重试', 'error');
+                // 恢复开关状态
+                $(`#word${id}`).prop('checked', !status);
+            }
+        });
+    });
+    
+    // 删除敏感词
+    $('.delete-word').on('click', function() {
+        const id = $(this).data('id');
+        
+        if (confirm('确定要删除这个敏感词吗？')) {
+            $.ajax({
+                url: '{{ url_for("admin.delete_sensitive_word") }}',
+                type: 'POST',
+                data: { id: id },
+                success: function(response) {
+                    if (response.success) {
+                        showToast('删除成功', 'success');
+                        // 刷新页面
+                        location.reload();
+                    } else {
+                        showToast('删除失败: ' + response.message, 'error');
+                    }
+                },
+                error: function() {
+                    showToast('服务器错误，请稍后重试', 'error');
+                }
+            });
+        }
+    });
+    
+    // 保存新敏感词
+    $('#saveNewWord').on('click', function() {
+        const word = $('#newSensitiveWord').val().trim();
+        
+        if (!word) {
+            showToast('敏感词不能为空', 'error');
+            return;
+        }
+        
+        $.ajax({
+            url: '{{ url_for("admin.add_sensitive_word") }}',
+            type: 'POST',
+            data: { word: word },
+            success: function(response) {
+                if (response.success) {
+                    showToast('添加成功', 'success');
+                    // 关闭模态框并刷新页面
+                    $('#addWordModal').modal('hide');
+                    location.reload();
+                } else {
+                    showToast('添加失败: ' + response.message, 'error');
+                }
+            },
+            error: function() {
+                showToast('服务器错误，请稍后重试', 'error');
+            }
+        });
+    });
+    
+    // 搜索
+    $('#searchBtn').on('click', function() {
+        const keyword = $('#searchKeyword').val().trim();
+        const status = $('#statusFilter').val();
+        
+        window.location.href = '{{ url_for("admin.sensitive_words") }}' + 
+            '?keyword=' + encodeURIComponent(keyword) + 
+            '&status=' + status;
+    });
+    
+    // 重置
+    $('#resetBtn').on('click', function() {
+        $('#searchKeyword').val('');
+        $('#statusFilter').val('');
+        window.location.href = '{{ url_for("admin.sensitive_words") }}';
+    });
+    
+    // 导出
+    $('#exportBtn').on('click', function() {
+        window.location.href = '{{ url_for("admin.export_sensitive_words") }}';
+    });
+});
+</script>
+{% endblock %} 

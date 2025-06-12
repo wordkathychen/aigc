@@ -1,0 +1,553 @@
+{% extends "admin/base.html" %}
+
+{% block title %}API密钥管理 - AI文本生成器{% endblock %}
+
+{% block page_title %}API密钥管理{% endblock %}
+
+{% block content %}
+<div class="row mt-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5>接口类型</h5>
+                <select class="form-control" style="width: auto;" id="apiTypeFilter">
+                    <option value="">请选择</option>
+                    <option value="openai">OpenAI</option>
+                    <option value="azure">Azure</option>
+                    <option value="anthropic">Anthropic</option>
+                    <option value="zhipu">智谱</option>
+                    <option value="baidu">文心一言</option>
+                    <option value="xunfei">讯飞星火</option>
+                </select>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <input type="text" class="form-control" placeholder="请输入关键词" id="searchKeyword">
+                            <div class="input-group-append">
+                                <button class="btn btn-primary" type="button" id="searchBtn">
+                                    <i class="fas fa-search"></i> 查询
+                                </button>
+                                <button class="btn btn-secondary" type="button" id="resetBtn">
+                                    <i class="fas fa-redo"></i> 重置
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-control" id="statusFilter">
+                            <option value="">请选择</option>
+                            <option value="1">已开启</option>
+                            <option value="0">已禁用</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 text-right">
+                        <button class="btn btn-primary" data-toggle="modal" data-target="#addApiKeyModal">
+                            <i class="fas fa-plus"></i> 新增密钥
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- API设置选项卡 -->
+<div class="row mt-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs" id="apiTabs" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" id="api-tab" data-toggle="tab" href="#api-content" role="tab" aria-controls="api-content" aria-selected="true">AI设置</a>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <div class="tab-content" id="apiTabContent">
+                    <div class="tab-pane fade show active" id="api-content" role="tabpanel" aria-labelledby="api-tab">
+                        <!-- 新增密钥按钮 -->
+                        <div class="mb-3">
+                            <button class="btn btn-primary" data-toggle="modal" data-target="#addApiKeyModal">
+                                <i class="fas fa-plus"></i> 新增密钥
+                            </button>
+                        </div>
+                        
+                        <!-- API密钥列表 -->
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>接口类型</th>
+                                        <th>密钥</th>
+                                        <th>状态</th>
+                                        <th>自定义API名称</th>
+                                        <th>使用限额</th>
+                                        <th>创建时间</th>
+                                        <th>更新时间</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for key in api_keys %}
+                                    <tr>
+                                        <td>{{ key.api_type }}</td>
+                                        <td>
+                                            <div class="text-truncate" style="max-width: 150px;" title="{{ key.api_key }}">
+                                                {{ key.api_key }}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="custom-control custom-switch">
+                                                <input type="checkbox" class="custom-control-input toggle-api-key" id="key{{ key.id }}" data-id="{{ key.id }}" {% if key.is_active %}checked{% endif %}>
+                                                <label class="custom-control-label" for="key{{ key.id }}"></label>
+                                            </div>
+                                        </td>
+                                        <td>{{ key.custom_name or '-' }}</td>
+                                        <td>{{ key.quota or '无限制' }}</td>
+                                        <td>{{ key.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                        <td>{{ key.updated_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-info edit-key" data-id="{{ key.id }}" data-toggle="modal" data-target="#editApiKeyModal">
+                                                <i class="fas fa-edit"></i> 编辑
+                                            </button>
+                                            <button class="btn btn-sm btn-danger delete-key" data-id="{{ key.id }}">
+                                                <i class="fas fa-trash"></i> 删除
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="8" class="text-center">暂无API密钥</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- 分页 -->
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <div>共 {{ total }} 条</div>
+                            <nav aria-label="Page navigation">
+                                <ul class="pagination justify-content-end">
+                                    <li class="page-item {% if page == 1 %}disabled{% endif %}">
+                                        <a class="page-link" href="{{ url_for('admin.api_keys', page=page-1) if page > 1 else '#' }}">上一页</a>
+                                    </li>
+                                    
+                                    {% for p in range(1, total_pages + 1) %}
+                                    <li class="page-item {% if p == page %}active{% endif %}">
+                                        <a class="page-link" href="{{ url_for('admin.api_keys', page=p) }}">{{ p }}</a>
+                                    </li>
+                                    {% endfor %}
+                                    
+                                    <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+                                        <a class="page-link" href="{{ url_for('admin.api_keys', page=page+1) if page < total_pages else '#' }}">下一页</a>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加API密钥模态框 -->
+<div class="modal fade" id="addApiKeyModal" tabindex="-1" role="dialog" aria-labelledby="addApiKeyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addApiKeyModalLabel">新增API密钥</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="addApiKeyForm">
+                    <div class="form-group row">
+                        <label for="apiType" class="col-sm-3 col-form-label">接口类型 <span class="text-danger">*</span></label>
+                        <div class="col-sm-9">
+                            <select class="form-control" id="apiType" required>
+                                <option value="">请选择接口类型</option>
+                                <option value="openai">OpenAI</option>
+                                <option value="azure">Azure</option>
+                                <option value="anthropic">Anthropic</option>
+                                <option value="zhipu">智谱</option>
+                                <option value="baidu">文心一言</option>
+                                <option value="xunfei">讯飞星火</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group row">
+                        <label for="apiKey" class="col-sm-3 col-form-label">API密钥 <span class="text-danger">*</span></label>
+                        <div class="col-sm-9">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="apiKey" required>
+                                <div class="input-group-append">
+                                    <button class="btn btn-outline-secondary" type="button" id="generateApiKey">生成</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group row">
+                        <label for="customName" class="col-sm-3 col-form-label">自定义API名称</label>
+                        <div class="col-sm-9">
+                            <input type="text" class="form-control" id="customName" placeholder="可选">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group row">
+                        <label for="apiEndpoint" class="col-sm-3 col-form-label">API端点</label>
+                        <div class="col-sm-9">
+                            <input type="text" class="form-control" id="apiEndpoint" placeholder="可选，默认使用官方端点">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group row">
+                        <label for="modelName" class="col-sm-3 col-form-label">模型名称</label>
+                        <div class="col-sm-9">
+                            <input type="text" class="form-control" id="modelName" placeholder="可选，默认使用推荐模型">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group row">
+                        <label for="quota" class="col-sm-3 col-form-label">使用限额</label>
+                        <div class="col-sm-9">
+                            <input type="number" class="form-control" id="quota" placeholder="可选，留空表示无限制">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group row">
+                        <div class="col-sm-3"></div>
+                        <div class="col-sm-9">
+                            <div class="custom-control custom-switch">
+                                <input type="checkbox" class="custom-control-input" id="isActive" checked>
+                                <label class="custom-control-label" for="isActive">启用此API密钥</label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="saveApiKey">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 编辑API密钥模态框 -->
+<div class="modal fade" id="editApiKeyModal" tabindex="-1" role="dialog" aria-labelledby="editApiKeyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editApiKeyModalLabel">编辑API密钥</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="editApiKeyForm">
+                    <input type="hidden" id="editKeyId">
+                    
+                    <div class="form-group row">
+                        <label for="editApiType" class="col-sm-3 col-form-label">接口类型 <span class="text-danger">*</span></label>
+                        <div class="col-sm-9">
+                            <select class="form-control" id="editApiType" required>
+                                <option value="">请选择接口类型</option>
+                                <option value="openai">OpenAI</option>
+                                <option value="azure">Azure</option>
+                                <option value="anthropic">Anthropic</option>
+                                <option value="zhipu">智谱</option>
+                                <option value="baidu">文心一言</option>
+                                <option value="xunfei">讯飞星火</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group row">
+                        <label for="editApiKey" class="col-sm-3 col-form-label">API密钥 <span class="text-danger">*</span></label>
+                        <div class="col-sm-9">
+                            <input type="text" class="form-control" id="editApiKey" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group row">
+                        <label for="editCustomName" class="col-sm-3 col-form-label">自定义API名称</label>
+                        <div class="col-sm-9">
+                            <input type="text" class="form-control" id="editCustomName" placeholder="可选">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group row">
+                        <label for="editApiEndpoint" class="col-sm-3 col-form-label">API端点</label>
+                        <div class="col-sm-9">
+                            <input type="text" class="form-control" id="editApiEndpoint" placeholder="可选，默认使用官方端点">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group row">
+                        <label for="editModelName" class="col-sm-3 col-form-label">模型名称</label>
+                        <div class="col-sm-9">
+                            <input type="text" class="form-control" id="editModelName" placeholder="可选，默认使用推荐模型">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group row">
+                        <label for="editQuota" class="col-sm-3 col-form-label">使用限额</label>
+                        <div class="col-sm-9">
+                            <input type="number" class="form-control" id="editQuota" placeholder="可选，留空表示无限制">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group row">
+                        <div class="col-sm-3"></div>
+                        <div class="col-sm-9">
+                            <div class="custom-control custom-switch">
+                                <input type="checkbox" class="custom-control-input" id="editIsActive">
+                                <label class="custom-control-label" for="editIsActive">启用此API密钥</label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="updateApiKey">更新</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // 生成随机API密钥
+    $('#generateApiKey').on('click', function() {
+        const length = 32;
+        const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let key = '';
+        
+        for (let i = 0; i < length; i++) {
+            key += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        
+        $('#apiKey').val(key);
+    });
+    
+    // 保存新API密钥
+    $('#saveApiKey').on('click', function() {
+        const apiType = $('#apiType').val();
+        const apiKey = $('#apiKey').val().trim();
+        const customName = $('#customName').val().trim();
+        const apiEndpoint = $('#apiEndpoint').val().trim();
+        const modelName = $('#modelName').val().trim();
+        const quota = $('#quota').val().trim();
+        const isActive = $('#isActive').is(':checked');
+        
+        if (!apiType) {
+            showToast('请选择接口类型', 'error');
+            return;
+        }
+        
+        if (!apiKey) {
+            showToast('API密钥不能为空', 'error');
+            return;
+        }
+        
+        $.ajax({
+            url: '{{ url_for("admin.add_api_key") }}',
+            type: 'POST',
+            data: {
+                api_type: apiType,
+                api_key: apiKey,
+                custom_name: customName,
+                api_endpoint: apiEndpoint,
+                model_name: modelName,
+                quota: quota,
+                is_active: isActive ? 1 : 0
+            },
+            success: function(response) {
+                if (response.success) {
+                    showToast('添加成功', 'success');
+                    // 关闭模态框并刷新页面
+                    $('#addApiKeyModal').modal('hide');
+                    location.reload();
+                } else {
+                    showToast('添加失败: ' + response.message, 'error');
+                }
+            },
+            error: function() {
+                showToast('服务器错误，请稍后重试', 'error');
+            }
+        });
+    });
+    
+    // 编辑API密钥
+    $('.edit-key').on('click', function() {
+        const id = $(this).data('id');
+        
+        // 获取API密钥信息
+        $.ajax({
+            url: '{{ url_for("admin.get_api_key") }}',
+            type: 'GET',
+            data: { id: id },
+            success: function(response) {
+                if (response.success) {
+                    const key = response.api_key;
+                    
+                    $('#editKeyId').val(key.id);
+                    $('#editApiType').val(key.api_type);
+                    $('#editApiKey').val(key.api_key);
+                    $('#editCustomName').val(key.custom_name || '');
+                    $('#editApiEndpoint').val(key.api_endpoint || '');
+                    $('#editModelName').val(key.model_name || '');
+                    $('#editQuota').val(key.quota || '');
+                    $('#editIsActive').prop('checked', key.is_active);
+                } else {
+                    showToast('获取API密钥信息失败', 'error');
+                    $('#editApiKeyModal').modal('hide');
+                }
+            },
+            error: function() {
+                showToast('服务器错误，请稍后重试', 'error');
+                $('#editApiKeyModal').modal('hide');
+            }
+        });
+    });
+    
+    // 更新API密钥
+    $('#updateApiKey').on('click', function() {
+        const id = $('#editKeyId').val();
+        const apiType = $('#editApiType').val();
+        const apiKey = $('#editApiKey').val().trim();
+        const customName = $('#editCustomName').val().trim();
+        const apiEndpoint = $('#editApiEndpoint').val().trim();
+        const modelName = $('#editModelName').val().trim();
+        const quota = $('#editQuota').val().trim();
+        const isActive = $('#editIsActive').is(':checked');
+        
+        if (!apiType) {
+            showToast('请选择接口类型', 'error');
+            return;
+        }
+        
+        if (!apiKey) {
+            showToast('API密钥不能为空', 'error');
+            return;
+        }
+        
+        $.ajax({
+            url: '{{ url_for("admin.update_api_key") }}',
+            type: 'POST',
+            data: {
+                id: id,
+                api_type: apiType,
+                api_key: apiKey,
+                custom_name: customName,
+                api_endpoint: apiEndpoint,
+                model_name: modelName,
+                quota: quota,
+                is_active: isActive ? 1 : 0
+            },
+            success: function(response) {
+                if (response.success) {
+                    showToast('更新成功', 'success');
+                    // 关闭模态框并刷新页面
+                    $('#editApiKeyModal').modal('hide');
+                    location.reload();
+                } else {
+                    showToast('更新失败: ' + response.message, 'error');
+                }
+            },
+            error: function() {
+                showToast('服务器错误，请稍后重试', 'error');
+            }
+        });
+    });
+    
+    // 删除API密钥
+    $('.delete-key').on('click', function() {
+        const id = $(this).data('id');
+        
+        if (confirm('确定要删除这个API密钥吗？')) {
+            $.ajax({
+                url: '{{ url_for("admin.delete_api_key") }}',
+                type: 'POST',
+                data: { id: id },
+                success: function(response) {
+                    if (response.success) {
+                        showToast('删除成功', 'success');
+                        // 刷新页面
+                        location.reload();
+                    } else {
+                        showToast('删除失败: ' + response.message, 'error');
+                    }
+                },
+                error: function() {
+                    showToast('服务器错误，请稍后重试', 'error');
+                }
+            });
+        }
+    });
+    
+    // 切换API密钥状态
+    $('.toggle-api-key').on('change', function() {
+        const id = $(this).data('id');
+        const status = $(this).is(':checked');
+        
+        $.ajax({
+            url: '{{ url_for("admin.toggle_api_key") }}',
+            type: 'POST',
+            data: { id: id, status: status ? 1 : 0 },
+            success: function(response) {
+                if (response.success) {
+                    showToast('状态已更新', 'success');
+                } else {
+                    showToast('更新失败: ' + response.message, 'error');
+                    // 恢复开关状态
+                    $(`#key${id}`).prop('checked', !status);
+                }
+            },
+            error: function() {
+                showToast('服务器错误，请稍后重试', 'error');
+                // 恢复开关状态
+                $(`#key${id}`).prop('checked', !status);
+            }
+        });
+    });
+    
+    // 搜索
+    $('#searchBtn').on('click', function() {
+        const keyword = $('#searchKeyword').val().trim();
+        const status = $('#statusFilter').val();
+        const apiType = $('#apiTypeFilter').val();
+        
+        window.location.href = '{{ url_for("admin.api_keys") }}' + 
+            '?keyword=' + encodeURIComponent(keyword) + 
+            '&status=' + status +
+            '&api_type=' + apiType;
+    });
+    
+    // 重置
+    $('#resetBtn').on('click', function() {
+        $('#searchKeyword').val('');
+        $('#statusFilter').val('');
+        $('#apiTypeFilter').val('');
+        window.location.href = '{{ url_for("admin.api_keys") }}';
+    });
+    
+    // API类型过滤器变化时自动提交
+    $('#apiTypeFilter').on('change', function() {
+        const apiType = $(this).val();
+        window.location.href = '{{ url_for("admin.api_keys") }}' + 
+            '?api_type=' + apiType;
+    });
+});
+</script>
+{% endblock %} 

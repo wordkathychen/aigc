@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}提示词模板管理{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">提示词模板管理</h3>
+                    <div class="card-tools">
+                        <a href="{{ url_for('prompts.add_template') }}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus"></i> 添加模板
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }}">{{ message }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                    
+                    <div class="table-responsive">
+                        <table class="table table-hover table-striped">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>名称</th>
+                                    <th>类型</th>
+                                    <th>描述</th>
+                                    <th>状态</th>
+                                    <th>创建时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for template in templates %}
+                                <tr>
+                                    <td>{{ template.id }}</td>
+                                    <td>{{ template.name }}</td>
+                                    <td>{{ template.template_type }}</td>
+                                    <td>{{ template.description }}</td>
+                                    <td>
+                                        {% if template.is_active %}
+                                        <span class="badge badge-success">启用</span>
+                                        {% else %}
+                                        <span class="badge badge-danger">禁用</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ template.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <a href="{{ url_for('prompts.edit_template', id=template.id) }}" class="btn btn-info btn-sm">
+                                                <i class="fas fa-edit"></i> 编辑
+                                            </a>
+                                            <form action="{{ url_for('prompts.toggle_template', id=template.id) }}" method="POST" style="display: inline;">
+                                                <button type="submit" class="btn btn-warning btn-sm">
+                                                    {% if template.is_active %}
+                                                    <i class="fas fa-ban"></i> 禁用
+                                                    {% else %}
+                                                    <i class="fas fa-check"></i> 启用
+                                                    {% endif %}
+                                                </button>
+                                            </form>
+                                            <form action="{{ url_for('prompts.delete_template', id=template.id) }}" method="POST" style="display: inline;" onsubmit="return confirm('确定要删除此模板吗？此操作不可撤销。');">
+                                                <button type="submit" class="btn btn-danger btn-sm">
+                                                    <i class="fas fa-trash"></i> 删除
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="7" class="text-center">暂无提示词模板</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,31 @@
+{% extends "admin/base.html" %}
+
+{% block title %}页面未找到{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card mt-5">
+                <div class="card-header bg-danger text-white">
+                    <h3 class="mb-0"><i class="fas fa-exclamation-triangle mr-2"></i>404 - 页面未找到</h3>
+                </div>
+                <div class="card-body text-center">
+                    <div class="error-illustration mb-4">
+                        <i class="fas fa-search fa-5x text-muted"></i>
+                    </div>
+                    <h4>您请求的页面不存在</h4>
+                    <p class="text-muted">
+                        无法找到您尝试访问的页面，请检查URL是否正确。
+                    </p>
+                    <div class="mt-4">
+                        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-primary">
+                            <i class="fas fa-home mr-2"></i>返回首页
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,356 @@
+{% extends "admin/base.html" %}
+{% block title %}AI模型配置管理{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">AI模型配置列表</h3>
+          <div class="card-tools">
+            <a href="{{ url_for('admin.add_model_config') }}" class="btn btn-primary btn-sm">
+              <i class="fas fa-plus"></i> 添加配置
+            </a>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="row mb-3">
+            <div class="col-md-4">
+              <div class="form-group">
+                <label>任务类型筛选</label>
+                <select class="form-control" id="taskTypeFilter">
+                  <option value="">所有任务类型</option>
+                  <option value="title">标题生成</option>
+                  <option value="abstract_zh">中文摘要</option>
+                  <option value="abstract_en">英文摘要</option>
+                  <option value="keywords_zh">中文关键词</option>
+                  <option value="keywords_en">英文关键词</option>
+                  <option value="content">正文内容</option>
+                  <option value="references">参考文献</option>
+                  <option value="acknowledgement">致谢</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label>教育级别筛选</label>
+                <select class="form-control" id="educationLevelFilter">
+                  <option value="">所有教育级别</option>
+                  <option value="college">大专</option>
+                  <option value="undergraduate">本科</option>
+                  <option value="master">硕士</option>
+                  <option value="doctor">博士</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label>API类型筛选</label>
+                <select class="form-control" id="apiTypeFilter">
+                  <option value="">所有API类型</option>
+                  <option value="deepseek">DeepSeek</option>
+                  <option value="openai">OpenAI</option>
+                  <option value="zhipu">智谱AI</option>
+                  <option value="xunfei">讯飞星火</option>
+                  <option value="baidu">百度文心一言</option>
+                  <option value="anthropic">Anthropic</option>
+                  <option value="other">其他</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          
+          <div class="table-responsive">
+            <table class="table table-bordered table-hover" id="modelConfigTable">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>任务类型</th>
+                  <th>教育级别</th>
+                  <th>API类型</th>
+                  <th>模型名称</th>
+                  <th>温度</th>
+                  <th>最大Token</th>
+                  <th>状态</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for config in configs %}
+                <tr data-task="{{ config.task_type }}" data-education="{{ config.education_level }}" data-api="{{ config.api_type }}">
+                  <td>{{ config.id }}</td>
+                  <td>
+                    {% if config.task_type == 'title' %}
+                    <span class="badge badge-primary">标题</span>
+                    {% elif config.task_type == 'abstract_zh' %}
+                    <span class="badge badge-info">中文摘要</span>
+                    {% elif config.task_type == 'abstract_en' %}
+                    <span class="badge badge-info">英文摘要</span>
+                    {% elif config.task_type == 'keywords_zh' %}
+                    <span class="badge badge-secondary">中文关键词</span>
+                    {% elif config.task_type == 'keywords_en' %}
+                    <span class="badge badge-secondary">英文关键词</span>
+                    {% elif config.task_type == 'content' %}
+                    <span class="badge badge-success">正文内容</span>
+                    {% elif config.task_type == 'references' %}
+                    <span class="badge badge-warning">参考文献</span>
+                    {% elif config.task_type == 'acknowledgement' %}
+                    <span class="badge badge-danger">致谢</span>
+                    {% else %}
+                    <span class="badge badge-dark">{{ config.task_type }}</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if config.education_level == 'college' %}
+                    <span class="badge badge-secondary">大专</span>
+                    {% elif config.education_level == 'undergraduate' %}
+                    <span class="badge badge-primary">本科</span>
+                    {% elif config.education_level == 'master' %}
+                    <span class="badge badge-info">硕士</span>
+                    {% elif config.education_level == 'doctor' %}
+                    <span class="badge badge-danger">博士</span>
+                    {% else %}
+                    <span class="badge badge-dark">{{ config.education_level }}</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ config.api_type }}</td>
+                  <td>{{ config.model_name }}</td>
+                  <td>{{ config.temperature }}</td>
+                  <td>{{ config.max_tokens }}</td>
+                  <td>
+                    {% if config.is_active %}
+                    <span class="badge badge-success">启用</span>
+                    {% else %}
+                    <span class="badge badge-danger">禁用</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-nowrap">
+                    <button type="button" class="btn btn-info btn-sm view-config" data-toggle="modal" data-target="#viewConfigModal" data-id="{{ config.id }}">
+                      <i class="fas fa-eye"></i> 查看
+                    </button>
+                    <a href="{{ url_for('admin.edit_model_config', id=config.id) }}" class="btn btn-primary btn-sm">
+                      <i class="fas fa-edit"></i> 编辑
+                    </a>
+                    <a href="{{ url_for('admin.delete_model_config', id=config.id) }}" 
+                       class="btn btn-danger btn-sm"
+                       onclick="return confirm('确认删除该配置吗？此操作不可撤销！')">
+                      <i class="fas fa-trash"></i> 删除
+                    </a>
+                  </td>
+                </tr>
+                {% else %}
+                <tr>
+                  <td colspan="9" class="text-center">暂无模型配置数据</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card-footer">
+          <div class="alert alert-info">
+            <h5><i class="icon fas fa-info"></i> 模型配置说明</h5>
+            <p>模型配置用于设置不同任务类型和教育级别所使用的AI模型和参数。</p>
+            <p>每个配置会映射特定任务（如标题、摘要等）和特定教育级别（大专、本科等）到对应的模型。</p>
+            <p>客户端程序将根据这些配置自动选择合适的模型进行内容生成。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 查看配置模态框 -->
+<div class="modal fade" id="viewConfigModal" tabindex="-1" role="dialog" aria-labelledby="viewConfigModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="viewConfigModalLabel">查看模型配置详情</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <div class="col-md-6">
+            <div class="form-group">
+              <label>任务类型:</label>
+              <p id="viewTaskType" class="form-control-static"></p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="form-group">
+              <label>教育级别:</label>
+              <p id="viewEducationLevel" class="form-control-static"></p>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6">
+            <div class="form-group">
+              <label>API类型:</label>
+              <p id="viewApiType" class="form-control-static"></p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="form-group">
+              <label>模型名称:</label>
+              <p id="viewModelName" class="form-control-static"></p>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-3">
+            <div class="form-group">
+              <label>温度参数:</label>
+              <p id="viewTemperature" class="form-control-static"></p>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="form-group">
+              <label>最大Token数:</label>
+              <p id="viewMaxTokens" class="form-control-static"></p>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="form-group">
+              <label>Top P:</label>
+              <p id="viewTopP" class="form-control-static"></p>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="form-group">
+              <label>状态:</label>
+              <p id="viewIsActive" class="form-control-static"></p>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6">
+            <div class="form-group">
+              <label>频率惩罚:</label>
+              <p id="viewFrequencyPenalty" class="form-control-static"></p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="form-group">
+              <label>存在惩罚:</label>
+              <p id="viewPresencePenalty" class="form-control-static"></p>
+            </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6">
+            <div class="form-group">
+              <label>创建时间:</label>
+              <p id="viewCreatedAt" class="form-control-static"></p>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="form-group">
+              <label>更新时间:</label>
+              <p id="viewUpdatedAt" class="form-control-static"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">关闭</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  $(document).ready(function() {
+    // 筛选表格
+    function filterTable() {
+      var taskType = $('#taskTypeFilter').val();
+      var educationLevel = $('#educationLevelFilter').val();
+      var apiType = $('#apiTypeFilter').val();
+      
+      $('#modelConfigTable tbody tr').each(function() {
+        var row = $(this);
+        var showRow = true;
+        
+        if (taskType && row.data('task') != taskType) {
+          showRow = false;
+        }
+        
+        if (educationLevel && row.data('education') != educationLevel) {
+          showRow = false;
+        }
+        
+        if (apiType && row.data('api') != apiType) {
+          showRow = false;
+        }
+        
+        if (showRow) {
+          row.show();
+        } else {
+          row.hide();
+        }
+      });
+    }
+    
+    // 筛选事件绑定
+    $('#taskTypeFilter, #educationLevelFilter, #apiTypeFilter').change(filterTable);
+    
+    // 查看配置详情
+    $('.view-config').click(function() {
+      var id = $(this).data('id');
+      
+      // 使用AJAX获取配置详情
+      $.ajax({
+        url: '/admin/model_configs/api/get/' + id,
+        type: 'GET',
+        success: function(response) {
+          if (response.success) {
+            var config = response.config;
+            
+            // 任务类型显示
+            var taskTypeDisplay = config.task_type;
+            if (config.task_type == 'title') taskTypeDisplay = '标题生成';
+            else if (config.task_type == 'abstract_zh') taskTypeDisplay = '中文摘要';
+            else if (config.task_type == 'abstract_en') taskTypeDisplay = '英文摘要';
+            else if (config.task_type == 'keywords_zh') taskTypeDisplay = '中文关键词';
+            else if (config.task_type == 'keywords_en') taskTypeDisplay = '英文关键词';
+            else if (config.task_type == 'content') taskTypeDisplay = '正文内容';
+            else if (config.task_type == 'references') taskTypeDisplay = '参考文献';
+            else if (config.task_type == 'acknowledgement') taskTypeDisplay = '致谢';
+            
+            // 教育级别显示
+            var eduLevelDisplay = config.education_level;
+            if (config.education_level == 'college') eduLevelDisplay = '大专';
+            else if (config.education_level == 'undergraduate') eduLevelDisplay = '本科';
+            else if (config.education_level == 'master') eduLevelDisplay = '硕士';
+            else if (config.education_level == 'doctor') eduLevelDisplay = '博士';
+            
+            // 填充模态框数据
+            $('#viewTaskType').text(taskTypeDisplay);
+            $('#viewEducationLevel').text(eduLevelDisplay);
+            $('#viewApiType').text(config.api_type);
+            $('#viewModelName').text(config.model_name);
+            $('#viewTemperature').text(config.temperature);
+            $('#viewMaxTokens').text(config.max_tokens);
+            $('#viewTopP').text(config.top_p);
+            $('#viewFrequencyPenalty').text(config.frequency_penalty);
+            $('#viewPresencePenalty').text(config.presence_penalty);
+            $('#viewIsActive').text(config.is_active ? '启用' : '禁用');
+            $('#viewCreatedAt').text(config.created_at);
+            $('#viewUpdatedAt').text(config.updated_at);
+          } else {
+            alert('获取配置详情失败: ' + response.message);
+          }
+        },
+        error: function() {
+          alert('获取配置详情请求失败');
+        }
+      });
+    });
+  });
+</script>
+{% endblock %}
