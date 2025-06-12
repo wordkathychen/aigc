@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}{% if template %}编辑提示词模板{% else %}添加提示词模板{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">{% if template %}编辑提示词模板{% else %}添加提示词模板{% endif %}</h3>
+                    <div class="card-tools">
+                        <a href="{{ url_for('prompts.index') }}" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-arrow-left"></i> 返回列表
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }}">{{ message }}</div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                    
+                    <form method="POST" action="{% if template %}{{ url_for('prompts.edit_template', id=template.id) }}{% else %}{{ url_for('prompts.add_template') }}{% endif %}">
+                        <div class="form-group">
+                            <label for="name">模板名称 <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="name" name="name" value="{{ template.name if template else '' }}" required>
+                            <small class="form-text text-muted">模板名称必须唯一</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="template_type">模板类型 <span class="text-danger">*</span></label>
+                            <select class="form-control" id="template_type" name="template_type" required>
+                                <option value="">-- 请选择模板类型 --</option>
+                                {% for type in template_types %}
+                                <option value="{{ type }}" {% if template and template.template_type == type %}selected{% endif %}>{{ type }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="description">模板描述</label>
+                            <input type="text" class="form-control" id="description" name="description" value="{{ template.description if template else '' }}">
+                            <small class="form-text text-muted">简短描述模板的用途</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="content">模板内容 <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="content" name="content" rows="10" required>{{ template.content if template else '' }}</textarea>
+                            <small class="form-text text-muted">使用 {变量名} 格式添加变量，例如 {title}、{word_count} 等</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="variables">变量定义 (JSON格式)</label>
+                            <textarea class="form-control" id="variables" name="variables" rows="5">{{ template.variables if template else '{"变量名": "变量描述"}' }}</textarea>
+                            <small class="form-text text-muted">JSON格式的变量定义，例如 {"title": "标题", "word_count": "字数"}</small>
+                        </div>
+                        
+                        {% if template %}
+                        <div class="form-group form-check">
+                            <input type="checkbox" class="form-check-input" id="is_active" name="is_active" {% if template.is_active %}checked{% endif %}>
+                            <label class="form-check-label" for="is_active">启用此模板</label>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-primary">保存</button>
+                            <a href="{{ url_for('prompts.index') }}" class="btn btn-secondary">取消</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(document).ready(function() {
+        // 检查JSON格式
+        $('#variables').on('blur', function() {
+            try {
+                let value = $(this).val().trim();
+                if (value) {
+                    JSON.parse(value);
+                    $(this).removeClass('is-invalid').addClass('is-valid');
+                }
+            } catch (e) {
+                $(this).removeClass('is-valid').addClass('is-invalid');
+                alert('变量定义不是有效的JSON格式');
+            }
+        });
+    });
+</script>
+{% endblock %} 

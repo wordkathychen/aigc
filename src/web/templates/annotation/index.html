@@ -1,0 +1,86 @@
+{% extends "admin/base.html" %}
+
+{% block title %}批注处理{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">批注处理</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 offset-md-3">
+                            <div class="text-center mb-4">
+                                <h4>批注文件处理工具</h4>
+                                <p class="text-muted">上传带有批注的PDF文件，系统将自动分析批注并修改对应文本</p>
+                            </div>
+                            
+                            <div class="upload-container p-4 border rounded">
+                                <form action="{{ url_for('annotation.upload') }}" method="post" enctype="multipart/form-data" class="text-center">
+                                    <div class="form-group mb-4">
+                                        <div class="custom-file-container">
+                                            <div class="upload-icon mb-3">
+                                                <i class="fas fa-file-pdf fa-4x text-primary"></i>
+                                            </div>
+                                            <div class="custom-file">
+                                                <input type="file" name="file" class="custom-file-input" id="pdfFile" accept=".pdf" required>
+                                                <label class="custom-file-label" for="pdfFile">选择PDF文件</label>
+                                            </div>
+                                            <small class="form-text text-muted mt-2">
+                                                仅支持带有批注的PDF文件（从Word带批注生成的PDF）
+                                            </small>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <button type="submit" class="btn btn-primary btn-block">
+                                            <i class="fas fa-upload mr-2"></i>上传并处理
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <div class="card">
+                                    <div class="card-header bg-info text-white">
+                                        <h5 class="mb-0">使用说明</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <ol>
+                                            <li>上传Word生成的带批注的PDF文件</li>
+                                            <li>系统会自动提取PDF中的批注内容</li>
+                                            <li>分析批注要求，自动修改对应的文本</li>
+                                            <li>修改后的文本会以绿色显示</li>
+                                            <li>您可以下载修改后的文档（Word格式）</li>
+                                        </ol>
+                                        <div class="alert alert-warning">
+                                            <i class="fas fa-exclamation-triangle mr-2"></i>
+                                            注意：仅支持从Word带批注导出的PDF文件，其他方式创建的PDF可能无法正确识别批注
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    // 显示所选文件名
+    $(document).ready(function() {
+        $('.custom-file-input').on('change', function() {
+            var fileName = $(this).val().split('\\').pop();
+            $(this).next('.custom-file-label').html(fileName);
+        });
+    });
+</script>
+{% endblock %} 

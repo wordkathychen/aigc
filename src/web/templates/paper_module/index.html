@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+
+{% block title %}论文模块化生成{% endblock %}
+
+{% block styles %}
+<style>
+    .module-container {
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 15px;
+        margin-bottom: 20px;
+        background-color: #f9f9f9;
+    }
+    
+    .module-title {
+        font-weight: bold;
+        margin-bottom: 10px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 5px;
+    }
+    
+    .result-area {
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        padding: 10px;
+        margin-top: 10px;
+        min-height: 100px;
+        background-color: white;
+    }
+    
+    .progress-container {
+        margin-top: 10px;
+        display: none;
+    }
+    
+    .btn-copy, .btn-clear {
+        margin-left: 5px;
+    }
+    
+    .prompt-toggle {
+        cursor: pointer;
+        color: #007bff;
+        margin-bottom: 10px;
+        display: inline-block;
+    }
+    
+    .prompt-area {
+        display: none;
+        margin-bottom: 10px;
+    }
+    
+    .common-settings {
+        margin-bottom: 20px;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        background-color: #f0f8ff;
+    }
+    
+    .alert-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        width: 350px;
+        z-index: 9999;
+    }
+    
+    .status-badge {
+        margin-left: 10px;
+    }
+    
+    .btn-operation {
+        margin-right: 5px;
+        margin-bottom: 5px;
+    }
+    
+    #body-preview {
+        max-height: 500px;
+        overflow-y: auto;
+    }
+    
+    /* 响应式优化 */
+    @media (max-width: 768px) {
+        .alert-container {
+            width: 90%;
+            right: 5%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">论文模块化生成</h2>
+    
+    <!-- 提示信息容器 -->
+    <div id="alert-container"></div>
+    
+    <!-- 通用设置区域 -->
+    <div class="common-settings">
+        <h4>通用设置</h4>
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label for="title">论文标题 <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="title" placeholder="请输入论文标题" maxlength="200" required>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="education-level">学历等级</label>
+                    <select class="form-control" id="education-level">
+                        {% for level in education_levels %}
+                        <option value="{{ level }}">{{ level }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="form-group">
+                    <label for="subject">专业领域</label>
+                    <select class="form-control" id="subject">
+                        {% for subject in subject_areas %}
+                        <option value="{{ subject }}">{{ subject }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 大纲模块 -->
+    <div class="module-container">
+        <div class="module-title">论文大纲 <span class="text-danger">*</span></div>
+        <div class="form-group">
+            <label for="outline">请输入论文大纲（Markdown格式或有序列表）</label>
+            <textarea class="form-control" id="outline" rows="10" placeholder="# 引言&#10;## 研究背景&#10;## 研究意义&#10;# 文献综述&#10;## 国内研究现状&#10;## 国外研究现状&#10;# 研究方法&#10;## 理论框架&#10;## 研究设计&#10;# 结果分析&#10;## 数据分析&#10;## 结果讨论&#10;# 结论" required></textarea>
+        </div>
+        <div class="mt-2">
+            <button class="btn btn-info btn-sm" id="parse-outline-btn">解析大纲结构</button>
+            <div id="outline-info" class="mt-2"></div>
+        </div>
+    </div>
+    
+    <!-- 中文摘要模块 -->
+    <div class="module-container">
+        <div class="module-title">中文摘要</div>
+        <div class="form-group">
+            <span class="prompt-toggle" data-bs-toggle="collapse" data-bs-target="#custom-prompt-abstract-cn">自定义提示词 ▼</span>
+            <div class="collapse" id="custom-prompt-abstract-cn">
+                <textarea class="form-control" id="custom-prompt-abstract-cn" rows="3" placeholder="自定义中文摘要生成提示词" maxlength="500"></textarea>
+            </div>
+            <button class="btn btn-primary mt-2 generate-btn" id="generate-abstract-cn-btn">生成中文摘要</button>
+        </div>
+        <div class="mt-3">
+            <textarea class="form-control result-area" id="abstract-cn" rows="6" placeholder="生成的中文摘要将显示在这里"></textarea>
+        </div>
+        <div class="mt-2">
+            <button class="btn btn-sm btn-outline-secondary copy-btn" data-target="abstract-cn">复制</button>
+            <button class="btn btn-sm btn-outline-danger clear-btn" data-target="abstract-cn">清空</button>
+        </div>
+    </div>
+    
+    <!-- 中文关键词模块 -->
+    <div class="module-container">
+        <div class="module-title">中文关键词</div>
+        <div class="form-group">
+            <span class="prompt-toggle" data-bs-toggle="collapse" data-bs-target="#custom-prompt-keywords-cn">自定义提示词 ▼</span>
+            <div class="collapse" id="custom-prompt-keywords-cn">
+                <textarea class="form-control" id="custom-prompt-keywords-cn" rows="3" placeholder="自定义中文关键词生成提示词" maxlength="500"></textarea>
+            </div>
+            <button class="btn btn-primary mt-2 generate-btn" id="generate-keywords-cn-btn">生成中文关键词</button>
+        </div>
+        <div class="mt-3">
+            <textarea class="form-control result-area" id="keywords-cn" rows="3" placeholder="生成的中文关键词将显示在这里"></textarea>
+        </div>
+        <div class="mt-2">
+            <button class="btn btn-sm btn-outline-secondary copy-btn" data-target="keywords-cn">复制</button>
+            <button class="btn btn-sm btn-outline-danger clear-btn" data-target="keywords-cn">清空</button>
+        </div>
+    </div>
+    
+    <!-- 英文摘要模块 -->
+    <div class="module-container">
+        <div class="module-title">英文摘要 (Abstract)</div>
+        <div class="form-group">
+            <span class="prompt-toggle" data-bs-toggle="collapse" data-bs-target="#custom-prompt-abstract-en">自定义提示词 ▼</span>
+            <div class="collapse" id="custom-prompt-abstract-en">
+                <textarea class="form-control" id="custom-prompt-abstract-en" rows="3" placeholder="自定义英文摘要生成提示词" maxlength="500"></textarea>
+            </div>
+            <button class="btn btn-primary mt-2 generate-btn" id="generate-abstract-en-btn">生成英文摘要</button>
+        </div>
+        <div class="mt-3">
+            <textarea class="form-control result-area" id="abstract-en" rows="6" placeholder="生成的英文摘要将显示在这里"></textarea>
+        </div>
+        <div class="mt-2">
+            <button class="btn btn-sm btn-outline-secondary copy-btn" data-target="abstract-en">复制</button>
+            <button class="btn btn-sm btn-outline-danger clear-btn" data-target="abstract-en">清空</button>
+        </div>
+    </div>
+    
+    <!-- 英文关键词模块 -->
+    <div class="module-container">
+        <div class="module-title">英文关键词 (Keywords)</div>
+        <div class="form-group">
+            <span class="prompt-toggle" data-bs-toggle="collapse" data-bs-target="#custom-prompt-keywords-en">自定义提示词 ▼</span>
+            <div class="collapse" id="custom-prompt-keywords-en">
+                <textarea class="form-control" id="custom-prompt-keywords-en" rows="3" placeholder="自定义英文关键词生成提示词" maxlength="500"></textarea>
+            </div>
+            <button class="btn btn-primary mt-2 generate-btn" id="generate-keywords-en-btn">生成英文关键词</button>
+        </div>
+        <div class="mt-3">
+            <textarea class="form-control result-area" id="keywords-en" rows="3" placeholder="生成的英文关键词将显示在这里"></textarea>
+        </div>
+        <div class="mt-2">
+            <button class="btn btn-sm btn-outline-secondary copy-btn" data-target="keywords-en">复制</button>
+            <button class="btn btn-sm btn-outline-danger clear-btn" data-target="keywords-en">清空</button>
+        </div>
+    </div>
+    
+    <!-- 正文模块 -->
+    <div class="module-container">
+        <div class="module-title">论文正文</div>
+        <div class="form-group">
+            <div class="row">
+                <div class="col-md-6">
+                    <label for="word-count">目标字数</label>
+                    <input type="number" class="form-control" id="word-count" value="3000" min="1000" max="20000" step="500">
+                    <small class="form-text text-muted">建议范围：1000-20000字</small>
+                </div>
+            </div>
+            <span class="prompt-toggle" data-bs-toggle="collapse" data-bs-target="#custom-prompt-body">自定义提示词 ▼</span>
+            <div class="collapse" id="custom-prompt-body">
+                <textarea class="form-control" id="custom-prompt-body" rows="3" placeholder="自定义正文生成提示词" maxlength="500"></textarea>
+            </div>
+            <button class="btn btn-primary mt-2 generate-btn" id="generate-body-btn">生成论文正文</button>
+            <button class="btn btn-warning mt-2 ml-2" id="stop-generation-btn" disabled>停止生成</button>
+        </div>
+        
+        <!-- 生成状态显示 -->
+        <div class="alert alert-info mt-3" style="display: none;">
+            <span>当前状态：</span><span id="generation-status"></span>
+        </div>
+        
+        <!-- 进度条 -->
+        <div id="generation-progress-container" class="progress-container mt-3">
+            <div class="progress">
+                <div id="generation-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+            </div>
+            <small id="generation-section" class="text-muted">准备中...</small>
+        </div>
+        
+        <!-- 正文预览 -->
+        <div class="mt-3">
+            <h5>预览</h5>
+            <div id="body-preview" class="border p-3 rounded bg-white"></div>
+        </div>
+        
+        <div class="mt-3">
+            <textarea class="form-control result-area" id="body" rows="15" placeholder="生成的论文正文将显示在这里"></textarea>
+        </div>
+        <div class="mt-2">
+            <button class="btn btn-sm btn-outline-secondary copy-btn" data-target="body">复制</button>
+            <button class="btn btn-sm btn-outline-danger clear-btn" data-target="body">清空</button>
+        </div>
+    </div>
+    
+    <!-- 参考文献模块 -->
+    <div class="module-container">
+        <div class="module-title">参考文献</div>
+        <div class="form-group">
+            <span class="prompt-toggle" data-bs-toggle="collapse" data-bs-target="#custom-prompt-references">自定义提示词 ▼</span>
+            <div class="collapse" id="custom-prompt-references">
+                <textarea class="form-control" id="custom-prompt-references" rows="3" placeholder="自定义参考文献生成提示词" maxlength="500"></textarea>
+            </div>
+            <button class="btn btn-primary mt-2 generate-btn" id="generate-references-btn">生成参考文献</button>
+        </div>
+        <div class="mt-3">
+            <textarea class="form-control result-area" id="references" rows="10" placeholder="生成的参考文献将显示在这里"></textarea>
+        </div>
+        <div class="mt-2">
+            <button class="btn btn-sm btn-outline-secondary copy-btn" data-target="references">复制</button>
+            <button class="btn btn-sm btn-outline-danger clear-btn" data-target="references">清空</button>
+        </div>
+    </div>
+    
+    <!-- 致谢模块 -->
+    <div class="module-container">
+        <div class="module-title">致谢</div>
+        <div class="form-group">
+            <span class="prompt-toggle" data-bs-toggle="collapse" data-bs-target="#custom-prompt-acknowledgement">自定义提示词 ▼</span>
+            <div class="collapse" id="custom-prompt-acknowledgement">
+                <textarea class="form-control" id="custom-prompt-acknowledgement" rows="3" placeholder="自定义致谢生成提示词" maxlength="500"></textarea>
+            </div>
+            <button class="btn btn-primary mt-2 generate-btn" id="generate-acknowledgement-btn">生成致谢</button>
+        </div>
+        <div class="mt-3">
+            <textarea class="form-control result-area" id="acknowledgement" rows="6" placeholder="生成的致谢将显示在这里"></textarea>
+        </div>
+        <div class="mt-2">
+            <button class="btn btn-sm btn-outline-secondary copy-btn" data-target="acknowledgement">复制</button>
+            <button class="btn btn-sm btn-outline-danger clear-btn" data-target="acknowledgement">清空</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- CSRF Token -->
+<meta name="csrf-token" content="{{ csrf_token() }}">
+
+<!-- 引入自定义JS -->
+<script src="{{ url_for('static', filename='js/paper_module.js') }}"></script>
+{% endblock %}
+{% endblock %}

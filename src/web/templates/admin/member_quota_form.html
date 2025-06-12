@@ -1,0 +1,130 @@
+{% extends "admin/base.html" %}
+{% block title %}会员额度管理{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">{{ title }}</h3>
+          <div class="card-tools">
+            <a href="{{ url_for('admin.members') }}" class="btn btn-secondary btn-sm">
+              <i class="fas fa-arrow-left"></i> 返回会员列表
+            </a>
+          </div>
+        </div>
+        <div class="card-body">
+          <form method="post">
+            {{ form.hidden_tag() }}
+            
+            <div class="form-group">
+              <label>会员: <span class="text-primary">{{ member.username }}</span></label>
+            </div>
+            
+            <div class="row">
+              <div class="col-md-6">
+                <div class="form-group">
+                  {{ form.total_credits.label(class="form-label") }}
+                  {{ form.total_credits(class="form-control" + (" is-invalid" if form.total_credits.errors else "")) }}
+                  {% if form.total_credits.errors %}
+                    <div class="invalid-feedback">
+                      {% for error in form.total_credits.errors %}
+                        {{ error }}
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+                  <small class="form-text text-muted">用户可生成的总次数</small>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-group">
+                  {{ form.remaining_credits.label(class="form-label") }}
+                  {{ form.remaining_credits(class="form-control" + (" is-invalid" if form.remaining_credits.errors else "")) }}
+                  {% if form.remaining_credits.errors %}
+                    <div class="invalid-feedback">
+                      {% for error in form.remaining_credits.errors %}
+                        {{ error }}
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+                  <small class="form-text text-muted">剩余生成次数，不能大于总次数</small>
+                </div>
+              </div>
+            </div>
+            
+            <div class="row">
+              <div class="col-md-6">
+                <div class="form-group">
+                  {{ form.total_tokens.label(class="form-label") }}
+                  {{ form.total_tokens(class="form-control" + (" is-invalid" if form.total_tokens.errors else "")) }}
+                  {% if form.total_tokens.errors %}
+                    <div class="invalid-feedback">
+                      {% for error in form.total_tokens.errors %}
+                        {{ error }}
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+                  <small class="form-text text-muted">总字数额度，限制生成文本的总字数</small>
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-group">
+                  {{ form.remaining_tokens.label(class="form-label") }}
+                  {{ form.remaining_tokens(class="form-control" + (" is-invalid" if form.remaining_tokens.errors else "")) }}
+                  {% if form.remaining_tokens.errors %}
+                    <div class="invalid-feedback">
+                      {% for error in form.remaining_tokens.errors %}
+                        {{ error }}
+                      {% endfor %}
+                    </div>
+                  {% endif %}
+                  <small class="form-text text-muted">剩余字数额度，不能大于总字数额度</small>
+                </div>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              {{ form.expires_at.label(class="form-label") }}
+              {{ form.expires_at(class="form-control" + (" is-invalid" if form.expires_at.errors else ""), type="datetime-local") }}
+              {% if form.expires_at.errors %}
+                <div class="invalid-feedback">
+                  {% for error in form.expires_at.errors %}
+                    {{ error }}
+                  {% endfor %}
+                </div>
+              {% endif %}
+              <small class="form-text text-muted">额度过期时间，留空表示永不过期</small>
+            </div>
+            
+            <div class="form-group">
+              {{ form.submit(class="btn btn-primary") }}
+              <a href="{{ url_for('admin.members') }}" class="btn btn-secondary">取消</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  $(document).ready(function() {
+    // 自动计算剩余额度为总额度
+    $('#total_credits').change(function() {
+      if ($('#remaining_credits').val() === '' || parseInt($('#remaining_credits').val()) > parseInt($(this).val())) {
+        $('#remaining_credits').val($(this).val());
+      }
+    });
+    
+    // 自动计算剩余字数为总字数
+    $('#total_tokens').change(function() {
+      if ($('#remaining_tokens').val() === '' || parseInt($('#remaining_tokens').val()) > parseInt($(this).val())) {
+        $('#remaining_tokens').val($(this).val());
+      }
+    });
+  });
+</script>
+{% endblock %} 
