@@ -6,8 +6,7 @@ WORKDIR /app
 COPY requirements-web.txt .
 
 # 安装依赖
-RUN pip install --no-cache-dir -r requirements-web.txt && \
-    pip install --no-cache-dir PyMuPDF==1.22.3 python-docx==0.8.11
+RUN pip install --no-cache-dir -r requirements-web.txt
 
 # 复制应用程序代码
 COPY . .
@@ -24,6 +23,7 @@ RUN mkdir -p /app/data/uploads/templates
 RUN mkdir -p /app/data/uploads/annotations
 RUN mkdir -p /app/data/uploads/outputs
 RUN mkdir -p /app/logs
+RUN mkdir -p /app/backups
 
 # 暴露端口
 EXPOSE 5000

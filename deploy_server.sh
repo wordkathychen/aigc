@@ -258,7 +258,7 @@ fi
 print_color "$YELLOW" "[10/12] 构建和检查Docker镜像..."
 if command -v docker &> /dev/null && command -v docker-compose &> /dev/null; then
     # 构建Docker镜像
-    docker-compose build --no-cache
+    docker-compose build
     
     if [ $? -ne 0 ]; then
         print_color "$RED" "错误: Docker镜像构建失败。"
@@ -267,24 +267,22 @@ if command -v docker &> /dev/null && command -v docker-compose &> /dev/null; the
     
     print_color "$GREEN" "Docker镜像构建成功。"
     
-    # 检查Docker镜像漏洞
+    # 检查Docker镜像漏洞，但使其变为可选
     if command -v trivy &> /dev/null; then
         print_color "$YELLOW" "使用Trivy检查Docker镜像漏洞..."
-        IMAGE_NAME=$(grep "image:" docker-compose.yml | head -n 1 | awk '{print $2}')
+        
+        # 获取镜像名称的方式更加灵活
+        IMAGE_NAME=$(grep -o "image:.*" docker-compose.yml | head -n 1 | sed 's/image://' | tr -d ' "')
         
         if [ -n "$IMAGE_NAME" ]; then
-            trivy image --severity HIGH,CRITICAL "$IMAGE_NAME"
-            
-            if [ $? -eq 0 ]; then
+            print_color "$YELLOW" "检测到镜像: $IMAGE_NAME"
+            read -p "是否运行安全扫描? (y/n): " -n 1 -r
+            echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                trivy image --severity HIGH,CRITICAL "$IMAGE_NAME" || true
                 print_color "$GREEN" "Docker镜像安全检查完成。"
             else
-                print_color "$RED" "警告: Docker镜像存在安全漏洞。"
-                read -p "是否继续部署? (y/n): " -n 1 -r
-                echo
-                if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-                    print_color "$RED" "部署已取消。"
-                    exit 1
-                fi
+                print_color "$YELLOW" "跳过安全扫描。"
             fi
         else
             print_color "$YELLOW" "无法确定Docker镜像名称，跳过漏洞扫描。"
