@@ -1,27 +1,12 @@
 # -*- mode: python ; coding: utf-8 -*-
 
-# 导入必要的模块
-import os
-from PyInstaller.utils.hooks import collect_data_files, collect_submodules
-
-# 收集额外的数据文件和子模块
-extra_datas = []
-extra_imports = []
-
-# 收集可能有问题的模块
-for module in ['tkinter', 'PIL', 'cryptography']:
-    try:
-        extra_datas.extend(collect_data_files(module))
-        extra_imports.extend(collect_submodules(module))
-    except Exception:
-        pass
 
 a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('src/web/templates', 'src/web/templates'), ('src/web/static', 'src/web/static'), ('src/config', 'src/config')] + extra_datas,
-    hiddenimports=['src.web.routes.main', 'src.web.routes.auth', 'src.web.routes.paper_module'] + extra_imports,
+    datas=[('src/web/templates', 'src/web/templates'), ('src/web/static', 'src/web/static'), ('src/config', 'src/config')],
+    hiddenimports=['src.web.routes.main', 'src.web.routes.auth', 'src.web.routes.paper_module'],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

@@ -17,6 +17,7 @@ ENV FLASK_APP=src/web/app.py
 ENV FLASK_ENV=production
 ENV FLASK_HOST=0.0.0.0
 ENV FLASK_PORT=5000
+ENV API_PORT=8000
 
 # 创建数据目录
 RUN mkdir -p /app/data/uploads/templates
@@ -27,6 +28,7 @@ RUN mkdir -p /app/backups
 
 # 暴露端口
 EXPOSE 5000
+EXPOSE 8000
 
 # 启动应用
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "4", "src.web.app:app"] 
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:5000 --workers 4 src.web.app:app & gunicorn --bind 0.0.0.0:8000 --workers 2 src.api.app:app"] 
