@@ -1,17 +1,3 @@
-ai-text-generator
-├── src
-│   ├── main.py
-│   ├── models
-│   │   └── deepseek.py
-│   ├── utils
-│   │   ├── text_processor.py
-│   │   └── outline_generator.py
-│   └── config
-│       └── settings.py
-├── tests
-│   └── test_outline_generator.py
-├── requirements.txt
-└── README.md
 flask==2.2.3
 flask-login==0.6.2
 flask-sqlalchemy==3.0.3

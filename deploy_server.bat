@@ -38,14 +38,31 @@ if not exist "data\uploads\outputs" mkdir data\uploads\outputs
 if not exist "data\uploads\templates" mkdir data\uploads\templates
 if not exist "logs" mkdir logs
 
+@echo off
+echo ===================================================
+echo AI文本生成器 - 服务器部署脚本
+echo ===================================================
+echo.
+
 echo [步骤2] 创建自定义Docker Compose覆盖文件...
-echo version: '3.8' > docker-compose.override.yml
-echo. >> docker-compose.override.yml
-echo services: >> docker-compose.override.yml
-echo   web: >> docker-compose.override.yml
-echo     ports: >> docker-compose.override.yml
-echo       - "154.201.65.63:5000:5000" >> docker-compose.override.yml
-echo       - "154.201.65.63:8000:8000" >> docker-compose.override.yml
+REM 完全覆盖主文件中的端口映射配置
+(
+echo services:
+echo   web:
+echo     ports: []
+) > docker-compose.override.yml
+
+echo [步骤2.1] 添加正确的端口映射...
+(
+echo services:
+echo   web:
+echo     ports:
+echo       - "5000:5000"
+echo       - "8000:8000"
+) >> docker-compose.override.yml
+
+echo [调试] 生成的覆盖文件内容:
+type docker-compose.override.yml
 
 echo [步骤3] 构建Docker镜像...
 docker-compose build
